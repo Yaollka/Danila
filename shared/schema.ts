@@ -1,97 +1,26 @@
-// TypeScript types for the application
-export interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  description: string;
-  specifications?: string[];
-  inStock: boolean;
-  createdAt?: Date;
-}
+import {
+  pgTable,
+  text,
+  varchar,
+  integer,
+  serial,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-export interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-}
+// Product table
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  price: integer("price").notNull(),
+  image: varchar("image", { length: 500 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  specs: text("specs").notNull(),
+});
 
-export interface ContactForm {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+});
 
-export interface PCBuild {
-  id: number;
-  motherboard?: Product;
-  processor?: Product;
-  graphics?: Product;
-  memory?: Product;
-  storage?: Product;
-  case?: Product;
-  total: number;
-}
-
-export interface User {
-  id: number;
-  email: string;
-  name: string;
-  role: 'user' | 'admin';
-  createdAt: Date;
-  lastLogin?: Date;
-}
-
-export interface AuthCode {
-  id: number;
-  email: string;
-  code: string;
-  expiresAt: Date;
-  used: boolean;
-  createdAt: Date;
-}
-
-export interface Order {
-  id: number;
-  userId: number;
-  items: OrderItem[];
-  totalAmount: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  shippingAddress: string;
-  paymentMethod: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface OrderItem {
-  id: number;
-  orderId: number;
-  productId: number;
-  productName: string;
-  productImage: string;
-  quantity: number;
-  price: number;
-}
-
-export interface LoginRequest {
-  email: string;
-}
-
-export interface VerifyCodeRequest {
-  email: string;
-  code: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  token?: string;
-  user?: User;
-  message?: string;
-}
-
-export type ProductCategory = 'all' | 'monitors' | 'keyboards' | 'mice' | 'processors' | 'graphics' | 'motherboards' | 'memory' | 'storage' | 'cases';
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;

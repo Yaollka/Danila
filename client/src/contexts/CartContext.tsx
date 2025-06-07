@@ -1,82 +1,115 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { CartItem } from '@/lib/types';
-import type { CartContextType } from '@/lib/types';
+import { createContext, useContext, useState, useEffect } from 'react';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  specs: string;
+}
+
+export interface CartItem extends Product {
+  quantity: number;
+}
+
+interface CartContextType {
+  cart: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: number) => void;
+  updateQuantity: (productId: number, change: number) => void;
+  clearCart: () => void;
+  getTotalItems: () => number;
+  getTotalPrice: () => number;
+  isCartOpen: boolean;
+  toggleCart: () => void;
+}
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('techempire_cart');
-    if (saved) {
+    const savedCart = localStorage.getItem('techempire-cart');
+    if (savedCart) {
       try {
-        setItems(JSON.parse(saved));
+        setCart(JSON.parse(savedCart));
       } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+        console.error('Failed to load cart from localStorage:', error);
       }
     }
   }, []);
 
-  // Save cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('techempire_cart', JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem('techempire-cart', JSON.stringify(cart));
+  }, [cart]);
 
-  const addItem = (product: any) => {
-    setItems(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item =>
+  const addToCart = (product: Product) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === product.id);
+      if (existingItem) {
+        return prevCart.map(item =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+      } else {
+        return [...prevCart, { ...product, quantity: 1 }];
       }
-      return [...prev, {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: 1
-      }];
     });
   };
 
-  const removeItem = (id: number) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (productId: number) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(id);
-      return;
-    }
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      )
-    );
+  const updateQuantity = (productId: number, change: number) => {
+    setCart(prevCart => {
+      return prevCart.map(item => {
+        if (item.id === productId) {
+          const newQuantity = item.quantity + change;
+          return newQuantity <= 0 
+            ? null 
+            : { ...item, quantity: newQuantity };
+        }
+        return item;
+      }).filter(Boolean) as CartItem[];
+    });
   };
 
   const clearCart = () => {
-    setItems([]);
+    setCart([]);
   };
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const getTotalPrice = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const toggleCart = () => {
+    setIsCartOpen(prev => !prev);
+  };
+
+  const value: CartContextType = {
+    cart,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    getTotalItems,
+    getTotalPrice,
+    isCartOpen,
+    toggleCart,
+  };
 
   return (
-    <CartContext.Provider value={{
-      items,
-      addItem,
-      removeItem,
-      updateQuantity,
-      clearCart,
-      totalItems,
-      totalPrice
-    }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
