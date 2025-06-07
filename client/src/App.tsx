@@ -4,7 +4,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CartProvider } from '@/contexts/CartContext';
 
-// Pages
 import Home from '@/pages/home';
 import About from '@/pages/about';
 import Contact from '@/pages/contact';
